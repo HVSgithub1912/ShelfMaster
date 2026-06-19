@@ -1,0 +1,21 @@
+{
+    "books": [
+        {
+            "id": "B-Y87NJ",
+            "title": "harsh",
+            "author": "ahrsh",
+            "total_copies": 34,
+            "available_copies": 34,
+            "added_on": "2026-06-19 16:38:05"
+        },
+        {
+            "id": "B-ONLHA",
+            "title": "fairy tales",
+            "author": "sarthak",
+            "total_copies": 5,
+            "available_copies": 5,
+            "added_on": "2026-06-19 17:25:52"
+        }
+    ],
+    "members": []
+}
