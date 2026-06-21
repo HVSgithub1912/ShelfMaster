@@ -162,4 +162,3 @@ while True:
         obj.return_book()
     elif choice == 0:
         exit(0)
-    
