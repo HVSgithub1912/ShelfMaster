@@ -80,30 +80,86 @@ class Library:
             print(f"Books borrowed are {m['borrowed']}")
 
     
+    def borrow_book(self):
+        book_id = input("Enter book_id : ").strip()#strip function removes extra spaces
+        books = [b for b in Library.data['books'] if b['id'] == book_id]
+        if not books:
+            print(f"No book with such id {book_id} is available")
+            return 
+        book = books[0]
+        
 
+        member_id = input("give member id please: ")
+        members =  [b for b in Library.data['members'] if b['id'] == member_id]
+        if not members:
+            print(f"No member with such id {member_id} is available")
+            return 
+        member = members[0]
+        if book['available_copies'] <= 0:
+            print("All are sold")
+            return
+        borrow_entry ={
+            "book_id" : book_id,
+            "book_name" : book['title'],
+            "borrow_on" : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
+        }
+        member['borrowed'].append(borrow_entry)
+        book['available_copies'] -= 1
+        Library.save_data()
+
+
+    def return_book(self):
+        member_id = input("give member id please: ")
+        members =  [b for b in Library.data['members'] if b['id'] == member_id]
+        if not members:
+            print(f"No member with such id {member_id} is available")
+            return 
+        member = members[0]
+        if not member['borrowed']:
+            print("you haven't borrowed any book ")
+            return 
+        print("Borrowed books")
+        for i,b in enumerate(member['borrowed'], start=1):
+            print(f"{i}. {b['book_name']}({b['book_id']})")
+
+        try:
+            choice = int(input("enter number to return : "))
+            selected = member['borrowed'].pop(choice-1)
+        except Exception as err:
+            print("invalid choice ")
+        
+        books = [bk for bk in Library.data["books"] if selected['book_id'] == bk['id']]
+        if books:
+            books[0]['available_book'] += 1
+        Library.save_data()
 
 obj = Library()
-
-print("="*50)
-print("LIBRARY MANAGEMENT SYSTEM")
-print("="*50)
-print("1. Add Book")
-print("2. List Books")
-print("3. Add members")
-print("4. list members")
-print("5. Borrow book")
-print("0. Exit portal")
-print("-"*50)
-choice = int(input("What task you want to do? "))
-if choice == 1:
-    obj.add_book()
-elif choice == 2:
-    obj.list_books()
-elif choice == 3:
-    obj.add_member()
-elif choice == 4:
-    obj.list_members()
-elif choice == 5:
-    obj.borrow_book()
-elif choice == 0:
-    obj.exit_portal()
+while True:
+    print("="*50)
+    print("LIBRARY MANAGEMENT SYSTEM")
+    print("="*50)
+    print("1. Add Book")
+    print("2. List Books")
+    print("3. Add members")
+    print("4. list members")
+    print("5. Borrow book")
+    print("6. Return Book")
+    print("0. Exit portal")
+    print("-"*50)
+    choice = int(input("What task you want to do? "))
+    if choice == 1:
+        obj.add_book()
+    elif choice == 2:
+        obj.list_books()
+    elif choice == 3:
+        obj.add_member()
+    elif choice == 4:
+        obj.list_members()
+    elif choice == 5:
+        obj.borrow_book()
+    elif choice == 6:
+        obj.return_book()
+    elif choice == 0:
+        exit(0)
+    
