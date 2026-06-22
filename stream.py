@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+from streamlit_option_menu import option_menu
 from library import Library
 
 lib = Library()
@@ -10,178 +12,339 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📚 Library Management System")
+# -------------------------
+# CUSTOM CSS
+# -------------------------
 
-menu = st.sidebar.selectbox(
-    "Choose Operation",
-    [
-        "Add Book",
-        "View Books",
-        "Add Member",
-        "View Members",
-        "Borrow Book",
-        "Return Book"
-    ]
-)
+st.markdown("""
+<style>
 
-# ------------------------------------------------
-# ADD BOOK
-# ------------------------------------------------
+.main {
+    background-color: #0E1117;
+}
 
-if menu == "Add Book":
+.card {
+    background-color: #1E293B;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+}
 
-    st.subheader("Add New Book")
+.metric {
+    font-size: 35px;
+    font-weight: bold;
+    color: #60A5FA;
+}
 
-    title = st.text_input("Book Title")
+.label {
+    font-size: 18px;
+    color: white;
+}
 
-    author = st.text_input("Author")
+</style>
+""", unsafe_allow_html=True)
 
-    copies = st.number_input(
-        "Number of Copies",
-        min_value=1,
-        step=1
+# -------------------------
+# SIDEBAR
+# -------------------------
+
+with st.sidebar:
+
+    selected = option_menu(
+        "Library Portal",
+        [
+            "Dashboard",
+            "Books",
+            "Members",
+            "Borrow",
+            "Return"
+        ],
+        icons=[
+            "house",
+            "book",
+            "people",
+            "arrow-right-circle",
+            "arrow-left-circle"
+        ],
+        default_index=0
     )
 
-    if st.button("Add Book"):
+# -------------------------
+# DATA
+# -------------------------
 
-        lib.add_book(title, author, copies)
+books = Library.data["books"]
+members = Library.data["members"]
 
-        st.success("Book Added Successfully")
+total_books = len(books)
 
+available_books = sum(
+    b["available_copies"]
+    for b in books
+)
 
-# ------------------------------------------------
-# VIEW BOOKS
-# ------------------------------------------------
+borrowed_books = sum(
+    b["total_copies"] - b["available_copies"]
+    for b in books
+)
 
-elif menu == "View Books":
+total_members = len(members)
 
-    st.subheader("Available Books")
+# -------------------------
+# DASHBOARD
+# -------------------------
 
-    if Library.data["books"]:
+if selected == "Dashboard":
 
-        df = pd.DataFrame(
-            Library.data["books"]
+    st.title("📚 Library Analytics Dashboard")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(f"""
+        <div class="card">
+        <div class="metric">{total_books}</div>
+        <div class="label">Books</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div class="card">
+        <div class="metric">{available_books}</div>
+        <div class="label">Available</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+        <div class="card">
+        <div class="metric">{borrowed_books}</div>
+        <div class="label">Borrowed</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"""
+        <div class="card">
+        <div class="metric">{total_members}</div>
+        <div class="label">Members</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+
+    left, right = st.columns(2)
+
+    with left:
+
+        fig = px.pie(
+            names=["Available", "Borrowed"],
+            values=[available_books, borrowed_books],
+            title="Book Distribution"
         )
 
-        st.dataframe(df)
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
-    else:
-        st.warning("No books available")
+    with right:
 
+        if books:
 
-# ------------------------------------------------
-# ADD MEMBER
-# ------------------------------------------------
+            df = pd.DataFrame(books)
 
-elif menu == "Add Member":
+            author_counts = (
+                df.groupby("author")
+                .size()
+                .reset_index(name="books")
+            )
 
-    st.subheader("Add Member")
+            fig2 = px.bar(
+                author_counts,
+                x="author",
+                y="books",
+                title="Books by Author"
+            )
 
-    name = st.text_input("Member Name")
+            st.plotly_chart(
+                fig2,
+                use_container_width=True
+            )
 
-    email = st.text_input("Email")
+    st.subheader("Recent Books")
 
-    if st.button("Add Member"):
+    if books:
+        st.dataframe(
+            pd.DataFrame(books),
+            use_container_width=True
+        )
 
-        lib.add_member(name, email)
+# -------------------------
+# BOOKS
+# -------------------------
 
-        st.success("Member Added Successfully")
+elif selected == "Books":
 
+    tab1, tab2 = st.tabs(
+        ["Add Book", "View Books"]
+    )
 
-# ------------------------------------------------
-# VIEW MEMBERS
-# ------------------------------------------------
+    with tab1:
 
-elif menu == "View Members":
+        st.subheader("Add New Book")
 
-    st.subheader("Members")
+        title = st.text_input("Book Title")
 
-    if Library.data["members"]:
+        author = st.text_input("Author")
 
-        members = []
+        copies = st.number_input(
+            "Copies",
+            min_value=1,
+            step=1
+        )
 
-        for m in Library.data["members"]:
+        if st.button("Add Book"):
 
-            members.append({
+            lib.add_book(
+                title,
+                author,
+                copies
+            )
+
+            st.success("Book Added")
+
+    with tab2:
+
+        if books:
+
+            search = st.text_input(
+                "🔍 Search Book"
+            )
+
+            filtered = [
+                b for b in books
+                if search.lower()
+                in b["title"].lower()
+            ]
+
+            st.dataframe(
+                pd.DataFrame(filtered),
+                use_container_width=True
+            )
+
+# -------------------------
+# MEMBERS
+# -------------------------
+
+elif selected == "Members":
+
+    tab1, tab2 = st.tabs(
+        ["Add Member", "View Members"]
+    )
+
+    with tab1:
+
+        name = st.text_input("Name")
+
+        email = st.text_input("Email")
+
+        if st.button("Register Member"):
+
+            lib.add_member(
+                name,
+                email
+            )
+
+            st.success("Member Registered")
+
+    with tab2:
+
+        member_data = []
+
+        for m in members:
+
+            member_data.append({
                 "ID": m["id"],
                 "Name": m["name"],
                 "Email": m["email"],
-                "Borrowed Books": len(m["borrowed"])
+                "Borrowed": len(
+                    m["borrowed"]
+                )
             })
 
-        st.dataframe(pd.DataFrame(members))
+        st.dataframe(
+            pd.DataFrame(member_data),
+            use_container_width=True
+        )
 
-    else:
-        st.warning("No members available")
+# -------------------------
+# BORROW
+# -------------------------
 
-
-# ------------------------------------------------
-# BORROW BOOK
-# ------------------------------------------------
-
-elif menu == "Borrow Book":
+elif selected == "Borrow":
 
     st.subheader("Borrow Book")
 
-    book_options = {
-        f"{b['title']} ({b['id']})": b["id"]
-        for b in Library.data["books"]
-    }
+    if books and members:
 
-    member_options = {
-        f"{m['name']} ({m['id']})": m["id"]
-        for m in Library.data["members"]
-    }
+        book_map = {
+            f"{b['title']} ({b['id']})":
+            b["id"]
+            for b in books
+        }
 
-    if book_options and member_options:
+        member_map = {
+            f"{m['name']} ({m['id']})":
+            m["id"]
+            for m in members
+        }
 
-        selected_book = st.selectbox(
+        book = st.selectbox(
             "Select Book",
-            list(book_options.keys())
+            list(book_map.keys())
         )
 
-        selected_member = st.selectbox(
+        member = st.selectbox(
             "Select Member",
-            list(member_options.keys())
+            list(member_map.keys())
         )
 
         if st.button("Borrow"):
 
             msg = lib.borrow_book(
-                book_options[selected_book],
-                member_options[selected_member]
+                book_map[book],
+                member_map[member]
             )
 
             st.success(msg)
 
-    else:
-        st.warning("Books or Members not available")
+# -------------------------
+# RETURN
+# -------------------------
 
-
-# ------------------------------------------------
-# RETURN BOOK
-# ------------------------------------------------
-
-elif menu == "Return Book":
+elif selected == "Return":
 
     st.subheader("Return Book")
 
-    member_options = {
-        f"{m['name']} ({m['id']})": m["id"]
-        for m in Library.data["members"]
-    }
+    if members:
 
-    if member_options:
+        member_map = {
+            f"{m['name']} ({m['id']})":
+            m["id"]
+            for m in members
+        }
 
-        selected_member = st.selectbox(
-            "Select Member",
-            list(member_options.keys())
+        selected = st.selectbox(
+            "Member",
+            list(member_map.keys())
         )
 
-        member_id = member_options[selected_member]
+        member_id = member_map[selected]
 
         member = next(
-            m for m in Library.data["members"]
+            m for m in members
             if m["id"] == member_id
         )
 
@@ -189,28 +352,22 @@ elif menu == "Return Book":
 
         if borrowed:
 
-            book_options = {
-                f"{b['book_name']} ({b['book_id']})":
+            book_map = {
+                f"{b['book_name']}":
                 b["book_id"]
                 for b in borrowed
             }
 
             selected_book = st.selectbox(
-                "Borrowed Books",
-                list(book_options.keys())
+                "Book",
+                list(book_map.keys())
             )
 
-            if st.button("Return Book"):
+            if st.button("Return"):
 
                 msg = lib.return_book(
                     member_id,
-                    book_options[selected_book]
+                    book_map[selected_book]
                 )
 
                 st.success(msg)
-
-        else:
-            st.info("No borrowed books")
-
-    else:
-        st.warning("No members found")
